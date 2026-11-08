@@ -1,0 +1,20 @@
+# Ambiente virtual
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Saídas geradas (gráficos, gifs, dados de simulação)
+outputs/*
+!outputs/.gitkeep
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store

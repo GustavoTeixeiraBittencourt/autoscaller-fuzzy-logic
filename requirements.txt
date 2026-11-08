@@ -1,0 +1,18 @@
+# Versões fixadas e testadas em 2026-11-08 (Python 3.12.3).
+#
+# scikit-fuzzy 0.5.0 tem metadata incompleta no PyPI: não declara scipy,
+# packaging nem networkx como dependências, embora precise delas em runtime
+# (skfuzzy.control importa networkx; skfuzzy.image importa packaging;
+# skfuzzy.fuzzymath importa scipy.linalg). Por isso elas estão listadas
+# explicitamente aqui — sem isso, `pip install scikit-fuzzy` sozinho resulta
+# em ModuleNotFoundError no primeiro `import skfuzzy.control`.
+
+numpy==2.5.4
+scipy==1.18.1
+packaging==26.3
+networkx==3.7
+scikit-fuzzy==0.5.0
+
+matplotlib==3.11.2
+jupyter==1.1.1
+pytest==9.2.0
