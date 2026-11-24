@@ -72,6 +72,25 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-24 — Loop de malha fechada (Fase 3)
+
+- **Data:** 2026-11-24
+- **Fase:** 3 — `src/simulation.py` + testes
+- **O que a IA gerou/revisou:**
+  - `simulation.py`: `simular()` (loop observar/decidir/avançar),
+    `avaliar()` headless e determinístico (fração de passos em violação
+    de SLO, custo, fila máxima, nº de mudanças de escala — nomes já
+    alinhados com os objetivos da futura extensão NSGA-II) e
+    `plotar_evolucao()` (gráfico estático de 3 painéis: CPU, fila por
+    instância, nº de instâncias, com a janela de pico destacada).
+  - `tests/test_simulation.py`: determinismo de `avaliar`, efeito do pico
+    de tráfego e de 2 condições iniciais diferentes nas métricas, e
+    geração/salvamento da figura.
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
