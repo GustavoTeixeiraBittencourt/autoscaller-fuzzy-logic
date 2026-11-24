@@ -83,6 +83,57 @@ destruiria a suavidade do resultado; arredondar só no fim é a prática
 padrão em controle fuzzy quando a variável de atuação é discreta por
 natureza (não dá para ligar "1.4 instância").
 
+## Fase 2 — Ambiente
+
+### Por que `atendidas(t) = min(q(t) + chegadas(t), n(t)·capacidade)` em vez de só `chegadas(t)`?
+
+Porque a fila existe justamente para representar trabalho acumulado: se eu
+ignorasse `q(t)` no cálculo de quanto é atendido, a fila nunca
+descarregaria mais rápido do que a chegada do próprio passo, mesmo com
+capacidade sobrando. Com essa fórmula, quando há capacidade de sobra, o
+sistema "come" tanto a fila atrasada quanto a chegada nova do passo.
+
+### Por que o aumento de instâncias tem atraso e a redução não?
+
+Isso imita o mundo real: provisionar uma instância nova (boot, imagem,
+health check) leva minutos; desligar uma é imediato. Esse atraso
+assimétrico (`atraso_provisionamento=3` passos só para aumentos) é
+intencional e é o que torna o problema de controle não-trivial — reagir
+tarde a um pico custa violação de SLO, porque a capacidade extra só chega
+depois.
+
+### Por que o sistema passa boa parte do tempo com CPU em 100%, mesmo sem pico de tráfego?
+
+Validei isso simulando o controlador fuzzy padrão por 500 passos sem pico
+(seed fixo): a CPU fica em 100% cerca de metade do tempo. Isso não é um
+bug — é consequência de três escolhas deliberadas: (1) `chegadas(t)` usa
+ruído Poisson (desvio padrão ≈ √média), então qualquer número de
+instâncias "just right" para a média vai ser insuficiente em ~metade dos
+passos só por variância estatística; (2) o controlador fuzzy, do jeito que
+foi desenhado, não mantém uma margem de segurança grande (ele reage à CPU
+alta, não tenta ficar permanentemente ocioso) porque isso tem custo
+(mais instâncias = mais dinheiro); (3) o atraso de provisionamento
+atrasa a correção. Decidi manter esse comportamento em vez de "suavizar"
+o ambiente para a CPU parecer mais estável, porque é exatamente a tensão
+custo×SLO que justifica a extensão futura com NSGA-II (dois objetivos:
+violação de SLO e custo) — um controlador hand-tuned "sem noção de custo"
+tende a ficar nessa zona de equilíbrio arriscada, e é isso que a
+otimização multiobjetivo vai poder corrigir.
+
+### Como validei os domínios de `fila` e `tendencia` (Fase 1 revisitada)?
+
+Rodei o ambiente com o controlador fuzzy padrão (500 passos, sem pico) e
+observei: `fila` (por instância) fica em 0 na maior parte do tempo, com
+p90 ≈ 11–15 e picos pontuais até ~45–70 — o domínio `[0, 50]` (Fase 1)
+cobre bem a faixa normal e satura (sem quebrar) nos picos mais extremos,
+o que é aceitável. `tendencia` fica tipicamente entre -2.3 e +2.3 (p10/p90)
+no regime sem pico, mas **durante um pico de tráfego realista**
+(`pico_amplitude=40`, 30 passos) chega a +9/+13 logo no início do pico —
+exatamente a faixa que os conjuntos "subindo"/"caindo" (ponto de corte em
+±8) precisam para disparar com força perto do pico, confirmando que os
+limites de -8/0/8 (Fase 1) fazem sentido: ficam "quietos" (estável) na
+operação normal e disparam justamente quando um pico real começa.
+
 ## Perguntas prováveis na apresentação
 
 **P: Por que não usar só um if/else com limiares de CPU, tipo Kubernetes HPA?**
@@ -117,3 +168,18 @@ R: O resultado mudaria de forma suave para pequenos ajustes de entrada
 máximos) ou `bisector` podem produzir saltos quando o conjunto dominante
 muda — pior para estabilidade da malha de controle e para a futura
 otimização via NSGA-II, que precisa de uma função objetivo bem comportada.
+
+**P: Por que o aumento de instâncias é atrasado e a redução não?**
+R: Representa o tempo real de provisionamento (boot de uma VM/container)
+versus o desligamento, que é imediato. Esse atraso assimétrico é
+justamente o que torna a malha fechada interessante: um controlador que
+reage tarde a um pico paga em violação de SLO porque a capacidade extra
+só chega alguns passos depois.
+
+**P: Por que o sistema fica com CPU em 100% boa parte do tempo mesmo sem pico?**
+R: É esperado dado o ruído Poisson nas chegadas (desvio padrão proporcional
+à raiz da média) combinado com um controlador que não mantém margem de
+segurança grande — ele reage à sobrecarga, não a evita com antecedência,
+porque manter instâncias extras tem custo. Essa tensão custo×SLO é
+documentada e é exatamente o que a extensão futura (NSGA-II, dois
+objetivos) otimiza.

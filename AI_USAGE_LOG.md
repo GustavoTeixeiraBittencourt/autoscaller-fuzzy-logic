@@ -49,6 +49,29 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-24 — Ambiente simulado (Fase 2)
+
+- **Data:** 2026-11-24
+- **Fase:** 2 — `src/environment.py` + testes
+- **O que a IA gerou/revisou:**
+  - `environment.py`: `Ambiente` com `observar()`/`avancar(delta)`,
+    chegadas senoidais (dia/noite) + ruído Poisson + pico configurável,
+    atraso de provisionamento assimétrico (aumento atrasado, redução
+    imediata), cálculo de `tendencia` por EMA, verificação de violação de
+    SLO pela espera estimada.
+  - `tests/test_environment.py`: determinismo por seed, limites de `n`,
+    atraso de provisionamento vs. redução imediata, dinâmica da fila
+    (cresce/esvazia conforme esperado), pico de tráfego, 2 condições
+    iniciais.
+  - Simulação exploratória (fora dos testes) rodando o controlador fuzzy
+    padrão contra o ambiente por 500 passos para validar que os domínios
+    de `fila` e `tendencia` escolhidos na Fase 1 realmente cobrem a faixa
+    produzida pelo ambiente — resultado registrado em `docs/DECISOES.md`.
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
