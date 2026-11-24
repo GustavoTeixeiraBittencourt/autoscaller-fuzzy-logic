@@ -134,6 +134,33 @@ exatamente a faixa que os conjuntos "subindo"/"caindo" (ponto de corte em
 limites de -8/0/8 (Fase 1) fazem sentido: ficam "quietos" (estável) na
 operação normal e disparam justamente quando um pico real começa.
 
+## Fase 4 — Baselines e métricas
+
+### Como os baselines foram ajustados para uma comparação justa?
+
+O limiar (`ControladorLimiar`) usa só CPU (40%/70%), no estilo
+Kubernetes HPA clássico. O PID (`ControladorPID`) atua sobre o erro
+`cpu - setpoint` (setpoint 65%) e teve a saída limitada a `[-3, 3]` — a
+mesma faixa de atuação do fuzzy — porque sem esse limite os primeiros
+testes mostraram o PID chegando a pedir `delta=±7` em um único passo (os
+ganhos iniciais eram agressivos demais); limitei a saída e reduzi os
+ganhos (`kp=0.025, ki=0.004, kd=0.015`) para que os três controladores
+disputem na mesma faixa de atuação por passo, isolando a diferença real
+entre as estratégias (não um PID descalibrado).
+
+### O que a tabela comparativa mostrou (cenário com pico, mesma seed)?
+
+Rodando os 3 controladores no mesmo cenário (pico de tráfego, mesma
+seed): o **fuzzy** teve o menor custo (soma de instâncias ao longo do
+tempo) mas também a única violação de SLO e a maior fila máxima; **limiar**
+e **PID** tiveram zero violação de SLO, mas custaram mais (mantiveram mais
+instâncias ligadas por precaução). Isso é o trade-off custo×SLO
+esperado, e é exatamente o motivo da extensão futura com NSGA-II —
+otimizar os parâmetros do fuzzy para reduzir a violação sem perder a
+vantagem de custo. O PID também teve o maior número de mudanças de escala
+(mais "oscilação"), coerente com sua sensibilidade a ruído via termo
+derivativo.
+
 ## Perguntas prováveis na apresentação
 
 **P: Por que não usar só um if/else com limiares de CPU, tipo Kubernetes HPA?**
@@ -183,3 +210,11 @@ segurança grande — ele reage à sobrecarga, não a evita com antecedência,
 porque manter instâncias extras tem custo. Essa tensão custo×SLO é
 documentada e é exatamente o que a extensão futura (NSGA-II, dois
 objetivos) otimiza.
+
+**P: Nos testes comparativos, o fuzzy teve violação de SLO e os baselines não — isso não é pior?**
+R: É mais barato (menor custo, soma de instâncias ao longo do tempo) às
+custas de alguma violação de SLO — um trade-off, não um erro. Limiar e
+PID "erraram para o lado seguro" mantendo mais instâncias ligadas o tempo
+todo. Esse trade-off explícito é o ponto de partida da extensão futura: o
+NSGA-II otimiza os parâmetros do fuzzy exatamente nesses dois eixos
+(violação de SLO vs. custo) em vez de eu ajustar os limiares à mão.

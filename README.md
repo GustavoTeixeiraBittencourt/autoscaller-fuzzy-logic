@@ -57,7 +57,7 @@ conforme o projeto avança.)*
 - [x] Fase 1 — Controlador fuzzy Mamdani (`fuzzy_controller.py`) e testes
 - [x] Fase 2 — Modelo do ambiente (`environment.py`) e testes
 - [x] Fase 3 — Loop de malha fechada (`simulation.py`) e gráficos estáticos
-- [ ] Fase 4 — Baselines (if/else, PID) e tabela comparativa (`baselines.py`, `metrics.py`)
+- [x] Fase 4 — Baselines (if/else, PID) e tabela comparativa (`baselines.py`, `metrics.py`)
 - [ ] Fase 5 — Visualização em tempo real e painel interno do fuzzy (bônus)
 - [ ] Fase 6 — Notebook final
 - [ ] Fase 7 — README completo, vídeo e declaração de IA

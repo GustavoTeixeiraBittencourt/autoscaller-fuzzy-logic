@@ -91,6 +91,31 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-24 — Baselines e métricas (Fase 4)
+
+- **Data:** 2026-11-24
+- **Fase:** 4 — `src/baselines.py`, `src/metrics.py` + testes
+- **O que a IA gerou/revisou:**
+  - `baselines.py`: `ControladorLimiar` (if/else por CPU, estilo
+    Kubernetes HPA) e `ControladorPID` (sobre o erro de CPU, setpoint
+    65%, saída limitada a [-3,3] para atuar na mesma faixa do fuzzy).
+    Ganhos do PID calibrados empiricamente (testes manuais fora da suíte)
+    depois que os ganhos iniciais produziram oscilação excessiva
+    (`delta` chegando a ±7 por passo).
+  - `metrics.py`: `calcular_metricas` (violação de SLO, custo, fila
+    máxima, mudanças de escala, tempo de recuperação pós-pico),
+    `tabela_comparativa` e `formatar_tabela` para rodar os 3
+    controladores no mesmo cenário/seed.
+  - `tests/test_baselines.py`, `tests/test_metrics.py`.
+  - Rodada exploratória (fora dos testes) com pico de tráfego comparando
+    os 3 controladores — resultado e interpretação registrados em
+    `docs/DECISOES.md` (trade-off custo × SLO, motivação da extensão
+    futura com NSGA-II).
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
