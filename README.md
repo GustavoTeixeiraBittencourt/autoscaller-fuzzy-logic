@@ -54,14 +54,13 @@ conforme o projeto avança.)*
 ## Status do desenvolvimento
 
 - [x] Fase 0 — Estrutura do projeto, ambiente e dependências
-- [ ] Fase 1 — Definição do cenário (estado, entradas, saída, perturbação)
-- [ ] Fase 2 — Controlador fuzzy Mamdani
-- [ ] Fase 3 — Modelo do ambiente
-- [ ] Fase 4 — Loop de realimentação e gráficos
-- [ ] Fase 5 — Visualização em tempo real
-- [ ] Fase 6 — Painel interno do fuzzy
-- [ ] Fase 7 — Baselines (if/else, PID) e comparação
-- [ ] Fase 8 — Notebook final, vídeo e declaração de IA
+- [x] Fase 1 — Controlador fuzzy Mamdani (`fuzzy_controller.py`) e testes
+- [ ] Fase 2 — Modelo do ambiente (`environment.py`) e testes
+- [ ] Fase 3 — Loop de malha fechada (`simulation.py`) e gráficos estáticos
+- [ ] Fase 4 — Baselines (if/else, PID) e tabela comparativa (`baselines.py`, `metrics.py`)
+- [ ] Fase 5 — Visualização em tempo real e painel interno do fuzzy (bônus)
+- [ ] Fase 6 — Notebook final
+- [ ] Fase 7 — README completo, vídeo e declaração de IA
 
 ## Uso de IA generativa
 
