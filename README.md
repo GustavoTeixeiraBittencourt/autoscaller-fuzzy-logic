@@ -16,6 +16,8 @@
   - [1.5 Inferência Mamdani e defuzzificação](#15-inferência-mamdani-e-defuzzificação)
   - [1.6 Modelo do ambiente (malha fechada)](#16-modelo-do-ambiente-malha-fechada)
   - [1.7 Baselines e métricas de comparação](#17-baselines-e-métricas-de-comparação)
+  - [1.8 Influência das entradas e das regras](#18-influência-das-entradas-e-das-regras-na-saída)
+  - [1.9 Limitações](#19-limitações)
 - [Parte 2 — Técnica](#parte-2--técnica)
   - [2.1 Estrutura do projeto](#21-estrutura-do-projeto)
   - [2.2 Como executar](#22-como-executar)
@@ -185,6 +187,129 @@ Métricas (`metrics.py`):
 | `num_mudancas_escala` | passos com `delta != 0` (proxy de oscilação) |
 | `tempo_recuperacao` | passos entre o fim do pico e a CPU ficar abaixo do setpoint por 5 passos consecutivos |
 
+## 1.8 Influência das entradas e das regras na saída
+
+Como a base de regras usa `score = nivel(cpu) + nivel(fila) + nivel(tendencia)`,
+**as três entradas influenciam a saída por construção**: mudar o conjunto
+dominante de qualquer uma delas, com as outras fixas, move o `score` em
+até ±1 nível e pode trocar o rótulo de saída. Nenhuma entrada é
+redundante, e nenhuma decide sozinha.
+
+**Papel de cada entrada**
+
+| Entrada | O que informa | Efeito típico na decisão |
+|---|---|---|
+| `cpu` | utilização atual da capacidade | sinal principal de saturação ou ociosidade; sozinha é ambígua (CPU alta pode ser um pico passageiro) |
+| `fila` (por instância) | acúmulo já ocorrido, ou seja, o dano ao SLO | confirma a saturação; fila grande pesa a favor de adicionar mesmo com CPU média |
+| `tendencia` | para onde a carga está indo | antecipa: permite reagir antes de a fila crescer (importante com atraso de provisionamento) e segurar a escala quando a carga já está caindo |
+
+**Exemplos de como as regras combinam as entradas** (valores do `score`
+da base de regras):
+
+| `cpu` | `fila` | `tendencia` | score | Saída | Leitura |
+|---|---|---|---|---|---|
+| alta | grande | subindo | +3 | adicionar_muito | pico claro: as três concordam |
+| baixa | pequena | caindo | −3 | remover_muito | ociosidade clara: as três concordam |
+| alta | pequena | caindo | −1 | remover | `tendencia` e `fila` vencem a `cpu`: evita escalar por um pico já em queda |
+| média | grande | subindo | +2 | adicionar_muito | CPU não está alta ainda, mas fila e tendência antecipam o problema |
+| baixa | grande | estável | 0 | manter | sinais conflitantes se cancelam: não há razão para agir |
+| média | média | estável | 0 | manter | ponto de equilíbrio |
+
+Pontos que a análise evidencia:
+
+- **Antecipação vs. reação.** Só o `tendencia` permite agir antes de a
+  `fila` crescer. É a entrada que mais ajuda contra o atraso de
+  provisionamento de 3 passos. Sem ela, o controlador seria puramente
+  reativo, como o if/else por CPU.
+- **Redução de oscilação.** Quando `cpu` alta coincide com `fila`
+  pequena e `tendencia` caindo, o controlador remove em vez de manter ou
+  adicionar. É o caso que faz o limiar rígido oscilar nas bordas.
+- **Transição suave.** Como os conjuntos se sobrepõem, várias regras
+  disparam ao mesmo tempo com graus diferentes; o centroide interpola
+  entre os rótulos em vez de saltar. O painel interno (seção 2.3) mostra
+  quais regras disparam e com que força em cada decisão.
+- **Pesos iguais por construção.** O critério do `score` trata as três
+  entradas com a mesma importância. A análise de sensibilidade abaixo
+  mede quanto cada uma realmente pesa na saída.
+
+**Análise de sensibilidade** (controlador padrão, saída contínua antes do
+arredondamento; reprodutível com `python scripts/analise_sensibilidade.py`)
+
+*(a) Uma entrada por vez*, partindo do ponto de equilíbrio
+(`cpu=50`, `fila=15`, `tendencia=0`, saída = 0), variando uma entrada ao
+longo de todo o seu domínio:
+
+| Entrada | Valores testados | Saída (de baixo para cima) | Amplitude |
+|---|---|---|---|
+| `cpu` | 0, 25, 50, 75, 100 | −1,00; −1,00; 0,00; +1,00; +1,00 | 2,00 |
+| `fila` | 0, 12,5, 25, 37,5, 50 | −1,00; −0,29; +1,00; +1,00; +1,00 | 2,00 |
+| `tendencia` | −20, −10, 0, 10, 20 | −1,00; −1,00; 0,00; +1,00; +1,00 | 2,00 |
+
+*(b) Contribuição global*: grade 15×15×15 sobre os três domínios
+(3375 pontos). Saída entre −2,22 e +2,22, variância total 1,724. A tabela
+mostra a fração da variância explicada por cada entrada isoladamente
+(efeito principal, variância das médias condicionais ÷ variância total):
+
+| Entrada | Fração da variância |
+|---|---|
+| `cpu` | 34,7% |
+| `tendencia` | 34,7% |
+| `fila` | 28,2% |
+| Interações (resto) | ≈ 2,4% |
+
+Leitura dos resultados:
+
+- **Todas as entradas influenciam a saída de forma relevante** (cada uma
+  explica de 28% a 35% da variância, e nenhuma é desprezível), como
+  esperado do critério do `score`.
+- **`cpu` e `tendencia` pesam igual** (34,7% cada); `fila` pesa um pouco
+  menos (28,2%). A diferença vem da forma dos conjuntos: a `fila` satura
+  cedo, pois a partir de ≈25 req/instância ("grande" já plena) a saída já
+  está no máximo, e a metade superior do domínio (25–50) quase não
+  acrescenta informação.
+- **O efeito é aproximadamente aditivo**: as interações respondem por
+  apenas ≈ 2,4% da variância, coerente com uma regra construída como soma
+  de níveis. A não linearidade aparece na saturação dos extremos, não em
+  combinações complexas entre entradas.
+- **A saída global (±2,22) fica abaixo do limite do domínio (±3)**, porque
+  o centroide sobre conjuntos agregados sobrepostos não alcança os
+  extremos; para chegar perto de ±3 seria preciso reposicionar os
+  conjuntos de saída. Isso é mais uma limitação do centroide do que um
+  erro.
+
+## 1.9 Limitações
+
+Os resultados devem ser lidos com estas ressalvas:
+
+- **Ambiente simulado.** A "física" é um modelo simples (fila determinística
+  dado o seed, ruído Poisson, capacidade fixa de 10 req/instância). Não há
+  heterogeneidade de instâncias, falhas, latência de rede nem carga real;
+  conclusões sobre desempenho valem para esse modelo, não para produção.
+- **Perfil de carga restrito.** Senoide "dia/noite" + um pico configurável.
+  Outros padrões (rajadas repetidas, quedas bruscas, sazonalidade
+  múltipla) não foram avaliados.
+- **Atraso de provisionamento fixo (`k=3`).** Na realidade o tempo de boot
+  varia; o controlador não modela esse atraso explicitamente, apenas se
+  beneficia da entrada `tendencia` para antecipar a carga.
+- **Parâmetros escolhidos à mão.** Formas, limites das funções de
+  pertinência e a base de regras (critério do `score`, que pesa as três
+  entradas igualmente) foram ajustados por inspeção, não otimizados. Pesos
+  iguais podem não ser ideais: por exemplo, a fila talvez devesse pesar
+  mais que a CPU. A otimização (NSGA-II) ficou como extensão futura.
+- **Saída discretizada.** O centroide é arredondado para inteiro e limitado
+  a `[-3, 3]`, o que limita a velocidade máxima de reação a picos muito
+  maiores que o testado.
+- **Comparação com baselines.** O PID e o if/else usam parâmetros
+  razoáveis, mas não sintonizados exaustivamente; uma sintonia melhor
+  poderia reduzir a vantagem (ou a desvantagem) do fuzzy. Os resultados
+  vêm de poucos seeds, sem teste estatístico de significância.
+- **Métrica de custo simplificada.** `custo` é a soma de `n(t)` (proxy de
+  instância×tempo), sem custo de transição, preço por tipo de instância ou
+  penalidade financeira de violar o SLO.
+- **Sem validação formal da estabilidade.** A estabilidade da malha é
+  avaliada empiricamente (oscilação via `num_mudancas_escala`), não por
+  análise teórica.
+
 ---
 
 # Parte 2 — Técnica
@@ -205,6 +330,8 @@ fuzzy-autoscaler/
 │   └── viz/
 │       ├── realtime.py         # animação em tempo real
 │       └── inner_panel.py      # painel interno do fuzzy (pertinências etc.)
+├── scripts/
+│   └── analise_sensibilidade.py  # sensibilidade das entradas (seção 1.8)
 ├── notebooks/
 │   └── projeto_fuzzy.ipynb
 ├── tests/
