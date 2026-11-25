@@ -166,6 +166,25 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-25 — README final (Fase 7)
+
+- **Data:** 2026-11-25
+- **Fase:** 7 — `README.md`
+- **O que a IA gerou/revisou:**
+  - Seção "Como executar" expandida: suíte de testes, abrir o notebook,
+    usar os módulos num script/REPL, e regenerar os assets de `docs/`
+    (GIF e painéis internos).
+  - Nova seção "Painel interno do fuzzy (bônus)" com imagem embutida.
+  - GIF de demonstração como imagem de abertura do README.
+  - Checklist de "Status do desenvolvimento" atualizado (fases 5–7
+    marcadas).
+  - Vídeo de apresentação: fica como pendência do autor (roteiro
+    preparado à parte, fora do controle de versão por enquanto).
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
