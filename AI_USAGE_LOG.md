@@ -142,6 +142,30 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-25 — Notebook final (Fase 6)
+
+- **Data:** 2026-11-25
+- **Fase:** 6 — `notebooks/projeto_fuzzy.ipynb`
+- **O que a IA gerou/revisou:**
+  - Declaração de uso de IA no topo do notebook.
+  - 4 casos de teste comentados do controlador fuzzy (ligados às notas de
+    `_NOTAS` em `fuzzy_controller.py`: pico de tráfego, ociosidade,
+    equilíbrio, combate à oscilação).
+  - 3 superfícies de controle 3D (malha aberta): `cpu x fila`,
+    `cpu x tendencia`, `fila x tendencia`.
+  - Evolução no tempo da malha fechada com pico de tráfego e 2 condições
+    iniciais (sistema vazio vs. fila acumulada).
+  - Tabela comparativa dos 3 controladores (fuzzy, limiar, PID) no mesmo
+    cenário/seed.
+  - Painel interno e animação (versão curta renderizada inline via
+    `to_jshtml`, GIF completo referenciado de `docs/`).
+  - Executado do zero (`jupyter execute`) sem erros antes de salvar, para
+    que os resultados já fiquem embutidos no arquivo.
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
