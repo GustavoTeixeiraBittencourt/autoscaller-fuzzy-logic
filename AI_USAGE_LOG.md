@@ -116,6 +116,32 @@ Cada entrada abaixo segue o formato:
 
 ---
 
+## 2026-11-25 — Painel interno e animação em tempo real (Fase 5)
+
+- **Data:** 2026-11-25
+- **Fase:** 5 — `src/viz/inner_panel.py`, `src/viz/realtime.py` + testes
+  (bônus)
+- **O que a IA gerou/revisou:**
+  - `viz/inner_panel.py`: reimplementação manual (fora da
+    `ControlSystemSimulation` do skfuzzy) da inferência Mamdani passo a
+    passo — graus de pertinência por entrada, regras disparadas, conjunto
+    agregado de saída e centroide — para poder desenhar os 4 painéis numa
+    única figura; validado numericamente contra `decidir_continuo`
+    (diferença < 0.01, atribuída à discretização da grade de 201 pontos).
+  - `viz/realtime.py`: animação da malha fechada (`FuncAnimation`)
+    revelando frame a frame uma simulação já computada (determinística,
+    sem re-simular no callback), salva em GIF via `PillowWriter` (sem
+    depender de ffmpeg); `gerar_gif_demo` como atalho.
+  - `tests/test_viz.py`: 6 testes (equivalência do centroide manual,
+    ordenação das regras disparadas por força, geração/salvamento de
+    figura e de GIF).
+  - `docs/demo_malha_fechada.gif` e `docs/painel_interno_pico.png` /
+    `docs/painel_interno_ocioso.png` gerados a partir desses módulos.
+- **O que eu validei ou alterei:**
+  - (preencher após revisão)
+
+---
+
 ## 2026-11-24 — SPEC e controlador fuzzy (Fase 1)
 
 - **Data:** 2026-11-24
